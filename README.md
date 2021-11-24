@@ -1,4 +1,5 @@
 # Association-Rule-Mining-GPU-vs-CPU
+##
 
 ## Project Requirements
 In this project you will learn to program, analyze and evaluate 2 different classes of Parallel Machines - shared memory multiprocessors and GPUs.  Specifically you will be using (i) ladon.cse.psu.edu for the former which has 48 cores and 64GB of physical memory; and (ii) W135 workstations which are equipped with an NVidia Quadro K2200 (Maxwell) card.
