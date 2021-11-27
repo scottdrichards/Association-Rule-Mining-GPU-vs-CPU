@@ -4,9 +4,9 @@ CFLAGS = -std=c++11 -Wall
 
 TMP = ./tmp/
 
-all: $(TMP)main.o $(TMP)database.o
+all: $(TMP)main.o $(TMP)database.o $(TMP)progressBar.o
 	mkdir $(TMP) -p
-	$(CC) $(CFLAGS) -o main.out $(TMP)main.o $(TMP)database.o
+	$(CC) $(CFLAGS) -o main.out $^
 
 debug: CFLAGS += -g
 debug: all

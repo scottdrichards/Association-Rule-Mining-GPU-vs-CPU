@@ -3,8 +3,10 @@
 #include <list>
 #include <set>
 #include "./database.h"
-#define NUM_TRANSACTIONS 100000
-#define MAX_TRANSACTION_SIZE 10
+#include "./progressBar.h"
+
+#define NUM_TRANSACTIONS 100
+#define MAX_TRANSACTION_SIZE 100
 #define FREQ_THRESHOLD .4
 static const char letters[]="abcdefghijklmnopqrstuvwxyz";
 
@@ -15,8 +17,7 @@ int main(int argc, char const *argv[])
         ItemSet transaction;
         for (auto j = 0; j<20+std::rand()%MAX_TRANSACTION_SIZE; j++){
             auto c = letters[std::rand()%26];
-            transaction.insert(c);
-            
+            transaction.insert(c);            
         }
         db.add(transaction);
     }
@@ -32,6 +33,7 @@ int main(int argc, char const *argv[])
     }
 
     while(toProcess.size()){
+        std::cout<<"Processing frequents of size "<<(*toProcess.begin()).size()<<std::endl;
         frequentTree.push_back(toProcess);
         toProcess.clear();
         auto currentSets = frequentTree.back();
@@ -39,8 +41,19 @@ int main(int argc, char const *argv[])
         for (const auto &currentSet:currentSets){
             currentMembers.insert(currentSet.begin(),currentSet.end());
         }
+
+
+        uint32_t setIndex = 0;
+        auto setLength = 1.0/currentSets.size();
         for (const auto & curSet:currentSets){
+            auto setProgress = setIndex*setLength;
+            setIndex++;            
+            uint32_t tryIndex = 0;
             for (auto item:currentMembers){
+                auto tryProgress = double(tryIndex)/currentMembers.size();
+                tryIndex++;
+                progressBar(setProgress+tryProgress*setLength);
+
                 // Check to see if item was already in curset
                 if (curSet.find(item) != curSet.end()) continue;
 
@@ -66,11 +79,14 @@ int main(int argc, char const *argv[])
 
                 auto support  = db.support(newSet);
                 if (support > FREQ_THRESHOLD){
-                    std::cout<<"Adding "<<std::string(newSet.begin(),newSet.end())<<std::endl;
+                    // std::cout<<"Adding "<<std::string(newSet.begin(),newSet.end())<<std::endl;
                     toProcess.insert(newSet);
                 };
             }
+
         }
+        progressBar(1);
+        std::cout<<std::endl;
     }
 
     std::set<ItemSet> frequents;
