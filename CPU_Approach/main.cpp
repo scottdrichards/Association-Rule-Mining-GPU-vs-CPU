@@ -26,14 +26,21 @@ int main(int argc, char const *argv[])
     // This list item is a set of itemsets. Each list item has increasing size
     std::list<std::set<ItemSet>> frequentTree;
     std::set<ItemSet> toProcess;
+    std::cout<<"Processing frequents of size "<<1<<std::endl;
+    uint32_t index = 0;
     for (auto item:db.allItems){
+        progressBar((double)index++/db.allItems.size());
         ItemSet itemSet{item};
         auto support  = db.support(itemSet);
         if (support > FREQ_THRESHOLD) toProcess.insert(itemSet);
     }
+    progressBar(1);
+    std::cout<<std::endl;
+
 
     while(toProcess.size()){
-        std::cout<<"Processing frequents of size "<<(*toProcess.begin()).size()<<std::endl;
+        auto currentSetSize = (*toProcess.begin()).size()+1;
+        std::cout<<"Processing frequents of size "<<currentSetSize<<std::endl;
         frequentTree.push_back(toProcess);
         toProcess.clear();
         auto currentSets = frequentTree.back();
@@ -79,14 +86,20 @@ int main(int argc, char const *argv[])
 
                 auto support  = db.support(newSet);
                 if (support > FREQ_THRESHOLD){
-                    // std::cout<<"Adding "<<std::string(newSet.begin(),newSet.end())<<std::endl;
+                    std::cout<<" "<<std::string(newSet.begin(),newSet.end());
+                    std::cout.flush();
                     toProcess.insert(newSet);
                 };
             }
 
         }
         progressBar(1);
-        std::cout<<std::endl;
+        // Erase current found
+        if (toProcess.size()){
+            std::cout<<std::string(currentSetSize+2,' ');
+            std::cout.flush();
+        }
+        std::cout<< std::endl;
     }
 
     std::set<ItemSet> frequents;
