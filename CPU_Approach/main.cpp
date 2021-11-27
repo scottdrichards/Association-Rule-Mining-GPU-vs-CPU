@@ -12,26 +12,28 @@ static const char letters[]="abcdefghijklmnopqrstuvwxyz";
 
 int main(int argc, char const *argv[])
 {
-    Database db;
+    TransactionList transactions;
+    ItemSet allItems;
     for (auto i = 0; i<NUM_TRANSACTIONS; i++){
         ItemSet transaction;
         for (auto j = 0; j<20+std::rand()%MAX_TRANSACTION_SIZE; j++){
             auto c = letters[std::rand()%26];
             transaction.insert(c);            
         }
-        db.add(transaction);
+        Database::add(transactions, transaction);
+        allItems.insert(transaction.begin(),transaction.end());
     }
-    std::cout<<"Added "<<db.transactions.size()<<" transactions including "<<db.allItems.size()<<" items"<<std::endl;
+    std::cout<<"Added "<<transactions.size()<<" transactions including "<<allItems.size()<<" items"<<std::endl;
 
     // This list item is a set of itemsets. Each list item has increasing size
     std::list<std::set<ItemSet>> frequentTree;
     std::set<ItemSet> toProcess;
     std::cout<<"Processing frequents of size "<<1<<std::endl;
     uint32_t index = 0;
-    for (auto item:db.allItems){
-        progressBar((double)index++/db.allItems.size());
+    for (auto item:allItems){
+        progressBar((double)index++/allItems.size());
         ItemSet itemSet{item};
-        auto support  = db.support(itemSet);
+        auto support  = Database::support(transactions, itemSet);
         if (support > FREQ_THRESHOLD) toProcess.insert(itemSet);
     }
     progressBar(1);
@@ -84,7 +86,7 @@ int main(int argc, char const *argv[])
 
                 if (!supportFromCurrentSets) continue;
 
-                auto support  = db.support(newSet);
+                auto support  = Database::support(transactions, newSet);
                 if (support > FREQ_THRESHOLD){
                     std::cout<<" "<<std::string(newSet.begin(),newSet.end());
                     std::cout.flush();
