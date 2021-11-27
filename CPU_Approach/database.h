@@ -1,19 +1,16 @@
 #pragma once
 #include <string>
 #include <set>
+#include <vector>
 
-typedef std::string Item;
+typedef char Item;
 typedef std::set<Item> ItemSet;
 
 class Database{
-    private:
-        std::set<ItemSet> db;
-        ItemSet allItems;
-    
     public:
+        std::vector<ItemSet> transactions;
+        ItemSet allItems;
         void add(const ItemSet& transaction);
         double confidence(const ItemSet& antecedent, const ItemSet& consequent);
         double support(const ItemSet & itemSet);
-
-        std::size_t size();
 };

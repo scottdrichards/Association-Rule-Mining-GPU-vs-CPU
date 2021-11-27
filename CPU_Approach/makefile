@@ -6,12 +6,13 @@ TMP = ./tmp/
 
 all: $(TMP)main.o $(TMP)database.o
 	mkdir $(TMP) -p
-	$(CC) $(CFLAGS) -o main.o $(TMP)main.o $(TMP)database.o
+	$(CC) $(CFLAGS) -o main.out $(TMP)main.o $(TMP)database.o
 
 debug: CFLAGS += -g
 debug: all
 
 $(TMP)main.o: main.cpp
+	mkdir $(TMP) -p
 	$(CC) $(CFLAGS) -o $@ -c main.cpp
 
 $(TMP)%.o: %.cpp 
