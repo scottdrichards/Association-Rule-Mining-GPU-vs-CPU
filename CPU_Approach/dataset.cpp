@@ -4,7 +4,7 @@
 #include "dataset.h"
 
 
-std::tuple<TransactionMap,std::vector<Item>> Dataset::generate(
+std::tuple<TransactionList,std::vector<Item>> Dataset::generate(
   const int & numClasses,
   const int & numTransactions,
   const double & skew,
@@ -37,7 +37,7 @@ std::tuple<TransactionMap,std::vector<Item>> Dataset::generate(
     classes.push_back(cur);
   };
 
-  TransactionMap transactions;
+  TransactionList transactions;
   for (auto i = 0; i<numTransactions; i++){
     auto itemCount = minTransactionSize+std::rand()%(maxTransactionSize-minTransactionSize);
     Transaction transaction;
@@ -48,7 +48,7 @@ std::tuple<TransactionMap,std::vector<Item>> Dataset::generate(
       prevIndex = classIndex;
       transaction.items.insert(classes[classIndex]);
     }
-    transactions.insert(std::pair<TransactionID, Transaction>(i,transaction));
+    transactions.push_back(transaction);
   }
   return std::tie(transactions, classes);
 }

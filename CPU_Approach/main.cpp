@@ -17,7 +17,7 @@ int main(int argc, char const *argv[])
     const auto maxTransactionSize = std::stoi(argv[argvIndex++]);
     const auto minTransactionSize = std::stoi(argv[argvIndex++]);
 
-    TransactionMap transactions;
+    TransactionList transactions;
     std::vector<Item> classes;
     std::tie (transactions, classes) = Dataset::generate(numClasses, numTransactions,skew, maxTransactionSize, minTransactionSize);
 
