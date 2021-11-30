@@ -2,39 +2,35 @@
 #include <algorithm> // find
 #include <list>
 #include <set>
+#include <tuple>
+#include "./dataset.h"
 #include "./database.h"
 #include "./progressBar.h"
 
-#define NUM_TRANSACTIONS 100
-#define MAX_TRANSACTION_SIZE 100
-#define FREQ_THRESHOLD .4
-static const char letters[]="abcdefghijklmnopqrstuvwxyz";
-
 int main(int argc, char const *argv[])
 {
-    TransactionList transactions;
-    ItemSet allItems;
-    for (auto i = 0; i<NUM_TRANSACTIONS; i++){
-        ItemSet transaction;
-        for (auto j = 0; j<20+std::rand()%MAX_TRANSACTION_SIZE; j++){
-            auto c = letters[std::rand()%26];
-            transaction.insert(c);            
-        }
-        Database::add(transactions, transaction);
-        allItems.insert(transaction.begin(),transaction.end());
-    }
-    std::cout<<"Added "<<transactions.size()<<" transactions including "<<allItems.size()<<" items"<<std::endl;
+    auto argvIndex = 1;
+    const auto freqThreshold = std::stof(argv[argvIndex++]);
+    const auto numClasses = std::stoi(argv[argvIndex++]);
+    const auto numTransactions = std::stoi(argv[argvIndex++]);
+    const auto skew = std::stof(argv[argvIndex++]);
+    const auto maxTransactionSize = std::stoi(argv[argvIndex++]);
+    const auto minTransactionSize = std::stoi(argv[argvIndex++]);
+
+    TransactionMap transactions;
+    std::vector<Item> classes;
+    std::tie (transactions, classes) = Dataset::generate(numClasses, numTransactions,skew, maxTransactionSize, minTransactionSize);
 
     // This list item is a set of itemsets. Each list item has increasing size
     std::list<std::set<ItemSet>> frequentTree;
     std::set<ItemSet> toProcess;
     std::cout<<"Processing frequents of size "<<1<<std::endl;
     uint32_t index = 0;
-    for (auto item:allItems){
-        progressBar((double)index++/allItems.size());
+    for (auto item:classes){
+        progressBar((double)index++/classes.size());
         ItemSet itemSet{item};
-        auto support  = Database::support(transactions, itemSet);
-        if (support > FREQ_THRESHOLD) toProcess.insert(itemSet);
+        auto support  = FrequencyAnalysis::support(transactions, itemSet);
+        if (support > freqThreshold) toProcess.insert(itemSet);
     }
     progressBar(1);
     std::cout<<std::endl;
@@ -42,7 +38,6 @@ int main(int argc, char const *argv[])
 
     while(toProcess.size()){
         auto currentSetSize = (*toProcess.begin()).size()+1;
-        std::cout<<"Processing frequents of size "<<currentSetSize<<std::endl;
         frequentTree.push_back(toProcess);
         toProcess.clear();
         auto currentSets = frequentTree.back();
@@ -50,6 +45,7 @@ int main(int argc, char const *argv[])
         for (const auto &currentSet:currentSets){
             currentMembers.insert(currentSet.begin(),currentSet.end());
         }
+        std::cout<<"Processing frequents of size "<<currentSetSize<<" having "<< currentMembers.size() <<" members"<<std::endl;
 
 
         uint32_t setIndex = 0;
@@ -86,9 +82,11 @@ int main(int argc, char const *argv[])
 
                 if (!supportFromCurrentSets) continue;
 
-                auto support  = Database::support(transactions, newSet);
-                if (support > FREQ_THRESHOLD){
-                    std::cout<<" "<<std::string(newSet.begin(),newSet.end());
+                auto support  = FrequencyAnalysis::support(transactions, newSet);
+                if (support > freqThreshold){
+                    std::cout<<" ";
+                    for (auto item:newSet) std::cout<<"\""<<item<<"\"";
+                    std::cout<<"           ";
                     std::cout.flush();
                     toProcess.insert(newSet);
                 };
@@ -112,7 +110,10 @@ int main(int argc, char const *argv[])
     std::cout<<"Counted "<<frequents.size()<<" frequents:"<<std::endl;
     for (auto&frequent: frequents){
         std::cout<<"{";
-        std::cout<<std::string(frequent.begin(),frequent.end());
+        for (auto it = frequent.begin(); it != frequent.end(); it++){
+            std::cout<<*it;
+            if (std::next(it)!=frequent.end()) std::cout<<",";
+        }
         std::cout<<"}, ";
     }
     std::cout<<std::endl;

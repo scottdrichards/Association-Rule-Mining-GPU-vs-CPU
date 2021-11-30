@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/CPU_Approach/main.out",
-            "args": [],
+            "args": ["0.001","128","10000","1","10","2"],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
             "environment": [],

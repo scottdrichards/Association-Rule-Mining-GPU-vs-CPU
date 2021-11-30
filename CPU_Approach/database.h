@@ -1,14 +1,12 @@
 #pragma once
 #include <string>
 #include <set>
-#include <list>
+#include <vector>
 
-typedef char Item;
-typedef std::set<Item> ItemSet;
-typedef std::list<ItemSet> TransactionList;
+#include "./dataset.h"
 
-namespace Database{
-    void add(TransactionList& transactions, const ItemSet& transaction);
-    double confidence(const TransactionList& transactions, const ItemSet& antecedent, const ItemSet& consequent);
-    double support(const TransactionList& transactions, const ItemSet & itemSet);
+namespace FrequencyAnalysis{
+    double confidence(const TransactionMap& transactions, const ItemSet& antecedent, const ItemSet& consequent);
+    double support(const TransactionMap& transactions, const ItemSet & itemSet);
+    ItemMap transform(const TransactionMap& transactions);
 }

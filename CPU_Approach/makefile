@@ -4,7 +4,7 @@ CFLAGS = -std=c++11 -Wall
 
 TMP = ./tmp/
 
-all: $(TMP)main.o $(TMP)database.o $(TMP)progressBar.o
+all: $(TMP)main.o $(TMP)database.o $(TMP)progressBar.o $(TMP)dataset.o
 	mkdir $(TMP) -p
 	$(CC) $(CFLAGS) -o main.out $^
 

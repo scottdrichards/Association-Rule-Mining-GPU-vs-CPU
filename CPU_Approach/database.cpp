@@ -1,43 +1,46 @@
 #include <string>
 #include <set>
 
+#include "./setUtils.h"
 #include "./database.h"
 
-void Database::add(TransactionList& transactions, const ItemSet& transaction){
-    transactions.push_back(transaction);
-}
-
-bool isSubset(const ItemSet & subSet, const ItemSet & superSet){
-    for (const auto&item:subSet){
-        if (superSet.find(item)==superSet.end()){
-            return false;
-        }
-    }
-    return true;
-}
-
-double Database::support(const TransactionList& transactions, const ItemSet & itemSet){
+double FrequencyAnalysis::support(const TransactionMap& transactions, const ItemSet & itemSet){
     auto count = 0;
-    for (const auto& transaction:transactions){
-        if (isSubset(itemSet,transaction)){
+    for (const auto& entry:transactions){
+        if (isSubset(itemSet,entry.second.items)){
             count++;
         }
     }
     return (double) count/transactions.size();
 }
 
-double Database::confidence(const TransactionList& transactions, const ItemSet& antecedent, const ItemSet& consequent){
+double FrequencyAnalysis::confidence(const TransactionMap& transactionMap, const ItemSet& antecedent, const ItemSet& consequent){
     auto ruleTrue = 0;
     auto antecedentAppearances = 0;
 
-    for (const auto& txn:transactions){
-        if (isSubset(antecedent, txn)){
+    for (const auto& transactionEntry:transactionMap){
+        if (isSubset(antecedent, transactionEntry.second.items)){
             antecedentAppearances++;
-            if (isSubset(consequent, txn)){
+            if (isSubset(consequent, transactionEntry.second.items)){
                 ruleTrue++;
             }
         }
     }
 
     return (double) ruleTrue/antecedentAppearances;
+}
+
+ItemMap transform(const TransactionMap& transactionMap){
+    ItemMap items;
+    for (const auto&entry:transactionMap){
+        for (const auto&item:entry.second.items){
+            auto itemInMapIt = items.find(item);
+            if (itemInMapIt == items.end()){
+                items.insert(ItemMapPair(item,{entry.first}));
+            }else{
+                itemInMapIt->second.insert(entry.first);
+            }
+        }
+    }
+    return items;
 }
