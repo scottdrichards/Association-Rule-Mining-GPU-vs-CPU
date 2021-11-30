@@ -4,24 +4,24 @@
 #include "./setUtils.h"
 #include "./database.h"
 
-double FrequencyAnalysis::support(const TransactionMap& transactions, const ItemSet & itemSet){
+double FrequencyAnalysis::support(const TransactionList& transactions, const ItemSet & itemSet){
     auto count = 0;
-    for (const auto& entry:transactions){
-        if (isSubset(itemSet,entry.second.items)){
+    for (const auto& transaction:transactions){
+        if (isSubset(itemSet,transaction.items)){
             count++;
         }
     }
     return (double) count/transactions.size();
 }
 
-double FrequencyAnalysis::confidence(const TransactionMap& transactionMap, const ItemSet& antecedent, const ItemSet& consequent){
+double FrequencyAnalysis::confidence(const TransactionList& transactions, const ItemSet& antecedent, const ItemSet& consequent){
     auto ruleTrue = 0;
     auto antecedentAppearances = 0;
 
-    for (const auto& transactionEntry:transactionMap){
-        if (isSubset(antecedent, transactionEntry.second.items)){
+    for (const auto& transaction:transactions){
+        if (isSubset(antecedent, transaction.items)){
             antecedentAppearances++;
-            if (isSubset(consequent, transactionEntry.second.items)){
+            if (isSubset(consequent, transaction.items)){
                 ruleTrue++;
             }
         }
@@ -30,15 +30,15 @@ double FrequencyAnalysis::confidence(const TransactionMap& transactionMap, const
     return (double) ruleTrue/antecedentAppearances;
 }
 
-ItemMap transform(const TransactionMap& transactionMap){
+ItemMap transform(const TransactionList& transactions){
     ItemMap items;
-    for (const auto&entry:transactionMap){
-        for (const auto&item:entry.second.items){
+    for (const auto&transaction:transactions){
+        for (const auto&item:transaction.items){
             auto itemInMapIt = items.find(item);
             if (itemInMapIt == items.end()){
-                items.insert(ItemMapPair(item,{entry.first}));
+                items.insert(ItemMapPair(item,{transaction.id}));
             }else{
-                itemInMapIt->second.insert(entry.first);
+                itemInMapIt->second.insert(transaction.id);
             }
         }
     }
