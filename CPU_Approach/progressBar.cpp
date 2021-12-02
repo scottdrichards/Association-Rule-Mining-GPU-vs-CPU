@@ -17,3 +17,8 @@ void progressBar(double progress, bool carriageReturn){
     std::cout<<'%';
     std::cout.flush();
 }
+
+void progressBar(bool complete){
+    progressBar(1.0);
+    std::cout<<std::endl;
+}

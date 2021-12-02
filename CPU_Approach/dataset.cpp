@@ -17,9 +17,9 @@ std::tuple<TransactionList,std::vector<Item>> Dataset::generate(
   auto genSample = [&](double mean = 0){
     std::normal_distribution<> dist{mean,skew};
     int sample = round(dist(gen));
-    auto res = (sample*(sample+13))%numClasses;
-    if (res<0)res= abs(res+1);
-    return res;
+    sample %= numClasses;
+    if (sample<0)sample = abs(sample+1);
+    return sample;
   };
 
 

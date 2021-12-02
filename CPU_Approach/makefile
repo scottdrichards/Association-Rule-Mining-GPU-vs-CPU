@@ -4,7 +4,9 @@ CFLAGS = -std=c++11 -Wall
 
 TMP = ./tmp/
 
-all: $(TMP)main.o $(TMP)database.o $(TMP)progressBar.o $(TMP)dataset.o
+ALL_FILES = $(basename $(wildcard *.cpp))
+
+all: $(addprefix $(TMP),$(addsuffix .o,$(ALL_FILES)))
 	mkdir $(TMP) -p
 	$(CC) $(CFLAGS) -o main.out $^
 
