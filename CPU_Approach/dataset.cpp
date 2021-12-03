@@ -24,7 +24,7 @@ std::tuple<TransactionList,std::vector<Item>> Dataset::generate(
 
 
   std::vector<Item> classes;
-  for (auto i = 0; i<=numClasses; i++){
+  for (auto i = 0; i<numClasses; i++){
     Item cur;
     auto val = i;
     if (val == 0) cur = letters[0];

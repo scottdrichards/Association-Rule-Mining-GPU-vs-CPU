@@ -1,52 +1,72 @@
+#include <iostream>
 #include <functional>
 #include "./frequencyAnalysis.h"
 #include "./frequents.h"
 #include "./progressBar.h"
+#include "./exclusiveRun.h"
+    
+std::set<ItemSet> generateTests(const ItemSet &buildFrom, const ItemSet & candidateItems){
+    std::set<ItemSet> tests;
 
-std::set<ItemSet> getFrequentsGeneric(std::function<double(ItemSet)> supportFn, float minFrequent, float minSupport, std::set<ItemSet> prevFrequents){
-    ItemSet currentItems;
-    for (const auto &prevFrequent:prevFrequents){
-        currentItems.insert(prevFrequent.begin(),prevFrequent.end());
+    for (const auto candidateItem:candidateItems){
+        auto test = buildFrom;
+        test.insert(candidateItem);
+        const auto testIsNew = buildFrom.size()!=test.size();
+        if (testIsNew) tests.insert(test);         
     }
+    return tests;
+}
+
+
+std::set<ItemSet> getFrequentsGeneric(std::function<double(ItemSet)> supportFn, Frequents::Job job){
 
     std::set<ItemSet> frequents;
     std::set<ItemSet> tested;
-    size_t index=0;
-    for (auto frequentTest:prevFrequents){
-        progressBar((double)index++/prevFrequents.size());
+    for (auto prevFrequent:job.prevFrequents){
 
-        for (const auto freqItem:currentItems){
-            const auto originalSize = frequentTest.size();
-            frequentTest.insert(freqItem);
+        std::set<ItemSet> tests;
+        if (job.testPrevFreq){
+            tests = {prevFrequent};
+        }else{
+            tests = generateTests(prevFrequent, job.candidateItems);
+        }
 
-            const auto itemAlreadyInSet = frequentTest.size() == originalSize;
-            if (itemAlreadyInSet) continue;
-
-            if (tested.find(frequentTest)!=tested.end()){
-                frequentTest.erase(freqItem);
+        // Now that we have tests, go through them
+        
+        for (auto iterator = tests.begin(); iterator != tests.end(); ){
+            auto curIt = iterator;
+            iterator++;
+            auto curTest = *curIt;
+            
+            if (tested.find(curTest)!=tested.end()){
+                tests.erase(curIt);
                 continue;
             }
 
-            double support = supportFn(frequentTest);
-            if (support>minSupport) frequents.insert(frequentTest);
-        }
-    }
-    progressBar();
+            tested.insert(curTest);
 
+            double support = supportFn(curTest);
+            if (support<job.minSupport){
+                tests.erase(curIt);
+            }
+        }
+        job.callback(tests);
+        frequents.insert(tests.begin(), tests.end());
+    }
     return frequents;
 }
 
 
-std::set<ItemSet> Frequents::getFrequents( const ItemMap &itemMap, const size_t & transactionCount, float minFrequent, float minSupport, std::set<ItemSet> prevFrequents){
+std::set<ItemSet> Frequents::getFrequents( const ItemMap &itemMap, const size_t & transactionCount, Frequents::Job job){
     auto supportFn = [&itemMap, &transactionCount](ItemSet items){
         return FrequencyAnalysis::support(itemMap, transactionCount, items);
     };
-    return getFrequentsGeneric(supportFn, minFrequent, minSupport, prevFrequents);
+    return getFrequentsGeneric(supportFn, job);
 }
 
-std::set<ItemSet> Frequents::getFrequents( const TransactionList &transactions, float minFrequent, float minSupport, std::set<ItemSet> prevFrequents){
+std::set<ItemSet> Frequents::getFrequents( const TransactionList &transactions, Frequents::Job job){
     auto supportFn = [&transactions](ItemSet items){
         return FrequencyAnalysis::support(transactions,items);
     };
-    return getFrequentsGeneric(supportFn, minFrequent, minSupport, prevFrequents);
+    return getFrequentsGeneric(supportFn, job);
 }

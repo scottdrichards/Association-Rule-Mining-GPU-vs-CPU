@@ -5,9 +5,9 @@
 
 #define BAR_WIDTH 70
 
-void progressBar(double progress, bool carriageReturn){
+void printProgress(double progress){
     auto completed = int(progress*BAR_WIDTH);
-    if (carriageReturn) std::cout<<'\r';
+    std::cout<<'\r';
     std::cout<<"[";
     std::cout<<std::string(completed,'=');
     std::cout<<">";
@@ -18,7 +18,7 @@ void progressBar(double progress, bool carriageReturn){
     std::cout.flush();
 }
 
-void progressBar(bool complete){
-    progressBar(1.0);
-    std::cout<<std::endl;
+void ProgressBar::update(size_t amount){
+    this->workDone+=amount;
+    printProgress((double)this->workDone/this->workToDo);
 }

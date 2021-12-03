@@ -1,6 +1,6 @@
 CC = g++
 
-CFLAGS = -std=c++11 -Wall
+CFLAGS = -std=c++11 -pthread -Wall
 
 TMP = ./tmp/
 
@@ -17,7 +17,7 @@ $(TMP)main.o: main.cpp
 	mkdir $(TMP) -p
 	$(CC) $(CFLAGS) -o $@ -c main.cpp
 
-$(TMP)%.o: %.cpp 
+$(TMP)%.o: %.cpp  %.h 
 	mkdir $(TMP) -p
 	$(CC) $(CFLAGS) -o $@ -c $<
 
