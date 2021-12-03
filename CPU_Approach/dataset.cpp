@@ -13,7 +13,7 @@ std::tuple<TransactionList,std::vector<Item>> Dataset::generate(
   std::string letters ="0123456789abcdef";
 
   std::random_device rd;
-  std::mt19937 gen(rd());
+  std::mt19937 gen(1);
   auto genSample = [&](double mean = 0){
     std::normal_distribution<> dist{mean,skew};
     int sample = round(dist(gen));
