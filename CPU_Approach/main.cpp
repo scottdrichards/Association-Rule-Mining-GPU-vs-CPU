@@ -1,4 +1,5 @@
 #include <iostream>
+#include <chrono> // keep track of how long each iteration takes
 #include <algorithm> // find
 #include <list>
 #include <set>
@@ -10,7 +11,6 @@
 #include "./progressBar.h"
 #include "./frequents.h"
 #include "./exclusiveRun.h"
-
 
 int main(int argc, char const *argv[])
 {
@@ -26,7 +26,13 @@ int main(int argc, char const *argv[])
     const auto skew = std::stof(argv[argvIndex++]);
     const auto maxTransactionSize = std::stoi(argv[argvIndex++]);
     const auto minTransactionSize = std::stoi(argv[argvIndex++]);
-    const auto numThreads = std::stoi(argv[argvIndex++]);
+    unsigned int numThreads = std::stoi(argv[argvIndex++]);
+
+    if (numThreads > std::thread::hardware_concurrency()){
+        std::cout<<"!!! numThreads is higher than number of concurrent threads the system supports, setting to system max: ";
+        std::cout<<std::thread::hardware_concurrency()<<std::endl;
+        numThreads = std::thread::hardware_concurrency();
+    }
 
     TransactionList transactions;
     std::vector<Item> classVector;
@@ -47,12 +53,14 @@ int main(int argc, char const *argv[])
     // }
     auto itemTransactions = FrequencyAnalysis::transform(transactions);
 
-
+    auto beginAll = std::chrono::high_resolution_clock::now();
 
     std::set<ItemSet> allFrequents;
     auto firstRun = true;
     auto curSize = 1;
     while (curFrequents.size()){
+        auto beginIteration = std::chrono::high_resolution_clock::now();
+
         std::vector<std::set<ItemSet>> workSets;
         ItemSet candidateItmes;
         for (auto i = 0; i<numThreads;i++) workSets.push_back({});
@@ -95,22 +103,34 @@ int main(int argc, char const *argv[])
             curFrequents.insert(result.begin(), result.end());
         }
         allFrequents.insert(curFrequents.begin(), curFrequents.end());
+
+        auto endIteration = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double, std::milli> milliseconds = endIteration-beginIteration;
+
+
         std::cout<<"\nCompleted group of size "<<curSize++<<", there are currently "<<allFrequents.size()<<" frequents"<<std::endl;
+        std::cout<<"Duration: "<<milliseconds.count()<<"ms"<<std::endl;
 
         firstRun = false;
     }
 
+    auto endAll = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> milliseconds = endAll-beginAll;
 
-    std::cout<<"Counted "<<allFrequents.size()<<" frequents:"<<std::endl;
-    for (auto&frequent: allFrequents){
-        std::cout<<"{";
-        for (auto it = frequent.begin(); it != frequent.end(); it++){
-            std::cout<<*it;
-            if (std::next(it)!=frequent.end()) std::cout<<",";
-        }
-        std::cout<<"}, ";
-    }
-    std::cout<<std::endl;
+    std::cout<< std::string(60,'-') <<std::endl;
+    std::cout<< std::string(25,'-') <<" COMPLETE "<<std::string(25,'-') <<std::endl;
+    std::cout<<"Configuration:"<<std::endl;
+    std::cout<<"\tFrequency threshold:   "<<freqThreshold<<std::endl;
+    std::cout<<"\tNumber of classes:     "<<numClasses<<std::endl;
+    std::cout<<"\tNumber of Transactions:"<<numTransactions<<std::endl;
+    std::cout<<"\tSkew (variance):       "<<skew<<std::endl;
+    std::cout<<"\tTransactionSize (min): "<<minTransactionSize<<std::endl;
+    std::cout<<"\tTransactionSize (max): "<<maxTransactionSize<<std::endl;
+    std::cout<<"\tNumber of threads:     "<<numThreads<<" (system supports up to "<<std::thread::hardware_concurrency()<<")"<<std::endl;
+    std::cout<<"Duration"<<std::endl;
+    std::cout<<"\tTotal:                 "<<int(milliseconds.count())<<" ms"<<std::endl;
+    std::cout<<"\tUtilization:           "<<int(milliseconds.count())*numThreads<<" ms*thread"<<std::endl;
 
+    std::cout<<"Counted "<<allFrequents.size()<<" frequents."<<std::endl;
     return 0;
 }
