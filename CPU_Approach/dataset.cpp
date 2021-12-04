@@ -3,6 +3,7 @@
 #include <tuple>
 #include "dataset.h"
 
+#define RNG_SEED 1
 
 std::tuple<TransactionList,std::vector<Item>> Dataset::generate(
   const int & numClasses,
@@ -12,8 +13,7 @@ std::tuple<TransactionList,std::vector<Item>> Dataset::generate(
   const int & minTransactionSize){
   std::string letters ="0123456789abcdef";
 
-  std::random_device rd;
-  std::mt19937 gen(1);
+  std::mt19937 gen(RNG_SEED);
   auto genSample = [&](double mean = 0){
     std::normal_distribution<> dist{mean,skew};
     int sample = round(dist(gen));
@@ -39,13 +39,15 @@ std::tuple<TransactionList,std::vector<Item>> Dataset::generate(
 
   TransactionList transactions;
   for (auto i = 0; i<numTransactions; i++){
-    auto itemCount = minTransactionSize+std::rand()%(maxTransactionSize-minTransactionSize);
     Transaction transaction;
+    auto itemCount = minTransactionSize+std::rand()%(maxTransactionSize-minTransactionSize);
     transaction.id = i;
-    auto prevIndex = 0;
+    
+    // Have them all clustered around the first item
+    auto firstIndex = genSample();
+    transaction.items.insert(classes[firstIndex]);
     for (auto j = 0; j<itemCount; j++){
-      auto classIndex = genSample(prevIndex);
-      prevIndex = classIndex;
+      auto classIndex = genSample(firstIndex);
       transaction.items.insert(classes[classIndex]);
     }
     transactions.push_back(transaction);
