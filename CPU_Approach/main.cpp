@@ -11,6 +11,7 @@
 #include "./progressBar.h"
 #include "./frequents.h"
 #include "./exclusiveRun.h"
+#include "./bitsetUtils.h"
 
 int main(int argc, char const *argv[])
 {
@@ -21,7 +22,7 @@ int main(int argc, char const *argv[])
     }
     auto argvIndex = 1;
     const auto freqThreshold = std::stof(argv[argvIndex++]);
-    const auto numClasses = std::stoi(argv[argvIndex++]);
+    auto numClasses = std::stoi(argv[argvIndex++]);
     const auto numTransactions = std::stoi(argv[argvIndex++]);
     const auto skew = std::stof(argv[argvIndex++]);
     const auto maxTransactionSize = std::stoi(argv[argvIndex++]);
@@ -33,76 +34,130 @@ int main(int argc, char const *argv[])
         std::cout<<std::thread::hardware_concurrency()<<std::endl;
         numThreads = std::thread::hardware_concurrency();
     }
+    if (numClasses > MAX_NUM_ITEMS){
+        std::cout<<"!!! num classes is higher than defined MAX_NUM_ITEMS, setting to max:"<<MAX_NUM_ITEMS<<std::endl;
+        numClasses = MAX_NUM_ITEMS;
+    }
 
-    TransactionList transactions;
-    std::vector<Item> classVector;
-    std::tie (transactions, classVector) = Dataset::generate(numClasses, numTransactions,skew, maxTransactionSize, minTransactionSize);
+    TransactionList transactions = Dataset::generate(numClasses, numTransactions,skew, maxTransactionSize, minTransactionSize);
 
-    std::set<ItemSet> curFrequents;
-    std::for_each( classVector.begin(), classVector.end(), [&curFrequents](Item item){
-        curFrequents.insert( ItemSet({item}));
-    });
+    std::vector<std::vector<ItemSet>> initialEquivalenceClass;
+    for (auto i = 0; i<numClasses; i++){
+        initialEquivalenceClass.push_back({(ItemSet{}).set(i)});
+    }
 
-    // for(const auto & txn:transactions){
-    //     std::cout<<txn.id<<": {";
-    //     for (auto it = txn.items.begin(); it != txn.items.end(); it++){
-    //         std::cout<<*it;
-    //         if (std::next(it)!=txn.items.end()) std::cout<<",";
-    //     }
-    //     std::cout<<"}, ";
-    // }
     auto itemTransactions = FrequencyAnalysis::transform(transactions);
 
     auto beginAll = std::chrono::high_resolution_clock::now();
 
-    std::set<ItemSet> allFrequents;
+
     auto firstRun = true;
     auto curSize = 1;
-    while (curFrequents.size()){
+    std::vector<ItemSet> allFrequents;
+    std::vector<ItemSet> curFrequents;
+    while (firstRun || curFrequents.size()){
+        auto totalWork = firstRun? numClasses:curFrequents.size();
         auto beginIteration = std::chrono::high_resolution_clock::now();
+        std::vector<std::vector<ItemSet>> equivalenceClasses;
+        if (firstRun){
+            equivalenceClasses = initialEquivalenceClass;
+        }else{
+            std::map<ItemID,uint32_t> classCounts;
+            for (const auto & frequent: curFrequents){
+                for (const auto & classID:itemSetToIDs(frequent)){
+                    auto classNode = classCounts.find(classID);
+                    if (classNode == classCounts.end()){
+                        classCounts.insert({classID,1});
+                    }else{
+                        classNode->second++;
+                    }
+                }
+            }
 
-        std::vector<std::set<ItemSet>> workSets;
-        ItemSet candidateItmes;
-        for (auto i = 0; i<numThreads;i++) workSets.push_back({});
-        auto i = 0;
-        for (const auto & freq:curFrequents){
-            workSets[(i++)%workSets.size()].insert(freq);
-            candidateItmes.insert(freq.begin(), freq.end());
+            // items will be sorted such that the lowest number will have the greater number of occurrences
+            std::vector<ItemID> items;
+            for (const auto & classCount:classCounts){
+                items.push_back(classCount.first);
+            }
+            sort(items.begin(), items.end(), [&classCounts](const ItemID &a, const ItemID &b){
+                return std::greater<uint32_t>{}(classCounts[a],classCounts[b]);
+            });
+
+            for (auto itemIt = items.begin(); itemIt != items.end(); itemIt++){
+                auto itemID = *itemIt;
+                std::vector<ItemSet> equivalenceClass;
+                // Go through ALL the remaining frequents and find the correct ones, removing them as you go
+                curFrequents.erase(std::remove_if(curFrequents.begin(),curFrequents.end(),[&](ItemSet curFrequent){
+                    // Does not apply to this itemID
+                    if (!curFrequent.test(itemID)) return false;
+                    
+                    // ... go through possible candidates adding them as necessary
+                    for (auto otherIt = itemIt+1; otherIt != items.end(); otherIt++){
+                        auto candidateSet = curFrequent;
+                        const auto & otherID = *otherIt;
+                        // If the set already includes the ID, just keep moving
+                        if (candidateSet[otherID]) continue;
+                        // Otherwise add it to the equivalence class
+                        candidateSet.set(otherID);
+                        equivalenceClass.push_back(candidateSet);
+                    }
+                    return true;
+                }),curFrequents.end());
+                
+                equivalenceClasses.push_back(equivalenceClass);
+            }
+        }
+        
+        size_t totalTests = 0;
+        for (const auto & equivalenceClass:equivalenceClasses){
+            totalTests += equivalenceClass.size();
         }
 
-        ProgressBar progressBar(curFrequents.size());
-        auto callback = [&progressBar](std::set<ItemSet> newItems){
+        auto targetTestCount = totalTests/numThreads;
+        std::vector<std::vector<ItemSet>> workSets{{}};
+        while(equivalenceClasses.size()){
+            // If the current job is too large, start a new work set
+            if (workSets.back().size()>=targetTestCount)workSets.push_back({});
+
+            // Copy the equivalence class to the job
+            const auto & equivalenceClass = equivalenceClasses.front();
+            auto & job = workSets.back();
+            job.insert(job.end(),equivalenceClass.begin(),equivalenceClass.end());
+
+            // Remove the equivalence class from the candidates
+            equivalenceClasses.erase(equivalenceClasses.begin());
+        }
+
+        ProgressBar progressBar(totalWork);
+        auto callback = [&progressBar](std::vector<ItemSet> newItems){
             exclusiveRun([&progressBar](){
                 progressBar.update(1);
             });
         };
 
-        auto workProcess = [&](const std::set<ItemSet> & myFrequents){
+        auto workProcess = [&](const std::vector<ItemSet> & candidates, bool useTranspose = true){
             Frequents::Job job = {};
             job.callback = callback;
-            job.prevFrequents = myFrequents;
-            job.candidateItems = candidateItmes;
+            job.candidates = candidates;
             job.minFrequent = 0;
             job.minSupport = freqThreshold;
-            job.testPrevFreq = firstRun;
             
-            bool useTranspose = false;
             if (useTranspose){
                 return Frequents::getFrequents(itemTransactions, transactions.size(), job);
             }
             return Frequents::getFrequents(transactions, job);            
         };
 
-        std::list<std::future<std::set<ItemSet>>> promises;
+        std::list<std::future<std::vector<ItemSet>>> promises;
         for (auto workSet:workSets){
             promises.push_back(std::async(workProcess, workSet));
         }
         curFrequents.clear();
         for (auto &promise:promises){
             auto result = promise.get();
-            curFrequents.insert(result.begin(), result.end());
+            curFrequents.insert(curFrequents.end(),result.begin(), result.end());
         }
-        allFrequents.insert(curFrequents.begin(), curFrequents.end());
+        allFrequents.insert(allFrequents.end(), curFrequents.begin(), curFrequents.end());
 
         auto endIteration = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double, std::milli> milliseconds = endIteration-beginIteration;
