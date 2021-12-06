@@ -7,17 +7,15 @@
 
 namespace Frequents{
 
-    typedef std::function<void(std::set<ItemSet>)> CallBack;
+    typedef std::function<void(std::vector<ItemSet>)> CallBack;
 
     typedef struct Job{
         float minFrequent;
         float minSupport;
-        std::set<ItemSet> prevFrequents;
-        ItemSet candidateItems;
+        std::vector<ItemSet> candidates;
         CallBack callback;
-        bool testPrevFreq;
     }Job;
 
-    std::set<ItemSet> getFrequents( const ItemMap &itemMap, const size_t & transactionCount, Job job);
-    std::set<ItemSet> getFrequents( const TransactionList &transactions, Job job);
+    std::vector<ItemSet> getFrequents( const ItemIndex &itemMap, const size_t & transactionCount, Job & job);
+    std::vector<ItemSet> getFrequents( const TransactionList &transactions, Job & job);
 }

@@ -4,12 +4,13 @@
 
 #include "./setUtils.h"
 #include "./frequencyAnalysis.h"
+#include "./bitsetUtils.h"
 
 
-std::list<TransactionID> mutualTransactions(const TransactionList& transactions, const ItemSet & items){
-    std::list<TransactionID> result;
+std::vector<TransactionID> mutualTransactions(const TransactionList& transactions, const ItemSet & items){
+    std::vector<TransactionID> result;
     for (const auto & transaction:transactions){
-        if (isSubset(items,transaction.items)){
+        if ((transaction.items & items) == items){
             result.push_back(transaction.id);
         }
     }
@@ -19,9 +20,7 @@ std::list<TransactionID> mutualTransactions(const TransactionList& transactions,
 size_t mutualTransactionCount(const TransactionList& transactions, const ItemSet & items){
     size_t count = 0;
     for (const auto & transaction:transactions){
-        if (isSubset(items,transaction.items)){
-            count++;
-        }
+        if ((transaction.items & items) == items) count++;
     }
     return count;
 }
@@ -32,13 +31,14 @@ double FrequencyAnalysis::support(const TransactionList& transactions, const Ite
     return (double) sharedCount/ transactions.size();
 }
 
-std::set<TransactionID> mutualTransactions(const ItemMap& itemMap, const ItemSet & items){
+std::set<TransactionID> mutualTransactions(const ItemIndex& itemMap, const ItemSet & items){
     std::set<TransactionID> sharedTransactions;
-    for (const auto& item:items){
+    for (const auto& item:itemSetToIDs(items)){
         auto itemMapIt = itemMap.find(item);
 
-        std::set<TransactionID> transactions;
-        if (itemMapIt != itemMap.end()) transactions = itemMapIt->second;
+        if (itemMapIt == itemMap.end()) continue;
+        
+        std::set<TransactionID> transactions(itemMapIt->second.begin(), itemMapIt->second.end());
         
         if (sharedTransactions.size() == 0){
             sharedTransactions.insert(transactions.begin(),transactions.end());
@@ -51,35 +51,19 @@ std::set<TransactionID> mutualTransactions(const ItemMap& itemMap, const ItemSet
 }
 
 
-double FrequencyAnalysis::support(const ItemMap& itemMap, size_t numTransactions, const ItemSet & items){
+double FrequencyAnalysis::support(const ItemIndex& itemMap, size_t numTransactions, const ItemSet & items){
     return (double)mutualTransactions(itemMap, items).size()/numTransactions;
 }
 
-double FrequencyAnalysis::confidence(const TransactionList& transactions, const ItemSet& antecedent, const ItemSet& consequent){
-    auto ruleTrue = 0;
-    auto antecedentAppearances = 0;
-
-    for (const auto& transaction:transactions){
-        if (isSubset(antecedent, transaction.items)){
-            antecedentAppearances++;
-            if (isSubset(consequent, transaction.items)){
-                ruleTrue++;
-            }
-        }
-    }
-
-    return (double) ruleTrue/antecedentAppearances;
-}
-
-ItemMap FrequencyAnalysis::transform(const TransactionList& transactions){
-    ItemMap items;
+ItemIndex FrequencyAnalysis::transform(const TransactionList& transactions){
+    ItemIndex items;
     for (const auto&transaction:transactions){
-        for (const auto&item:transaction.items){
+        for (const auto&item: itemSetToIDs(transaction.items)){
             auto itemInMapIt = items.find(item);
             if (itemInMapIt == items.end()){
-                items.insert(ItemMapPair(item,{transaction.id}));
+                items.insert({item,{transaction.id}});
             }else{
-                itemInMapIt->second.insert(transaction.id);
+                itemInMapIt->second.push_back(transaction.id);
             }
         }
     }

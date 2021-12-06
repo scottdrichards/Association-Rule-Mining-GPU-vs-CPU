@@ -5,13 +5,12 @@
 
 #define RNG_SEED 1
 
-std::tuple<TransactionList,std::vector<Item>> Dataset::generate(
+TransactionList Dataset::generate(
   const int & numClasses,
   const int & numTransactions,
   const double & skew,
   const int & maxTransactionSize,
   const int & minTransactionSize){
-  std::string letters ="0123456789abcdef";
 
   std::mt19937 gen(RNG_SEED);
   auto genSample = [&](double mean = 0){
@@ -22,35 +21,21 @@ std::tuple<TransactionList,std::vector<Item>> Dataset::generate(
     return sample;
   };
 
-
-  std::vector<Item> classes;
-  for (auto i = 0; i<numClasses; i++){
-    Item cur;
-    auto val = i;
-    if (val == 0) cur = letters[0];
-    while (val){
-      auto mod = val%letters.size();
-      cur = letters[mod] + cur;
-      val -= mod;
-      val /= letters.size();
-    }
-    classes.push_back(cur);
-  };
-
   TransactionList transactions;
   for (auto i = 0; i<numTransactions; i++){
-    Transaction transaction;
     auto itemCount = minTransactionSize+std::rand()%(maxTransactionSize-minTransactionSize);
+    Transaction transaction;
     transaction.id = i;
+    transaction.items = 0;
     
     // Have them all clustered around the first item
     auto firstIndex = genSample();
-    transaction.items.insert(classes[firstIndex]);
+    transaction.items.set(firstIndex);
     for (auto j = 0; j<itemCount; j++){
       auto classIndex = genSample(firstIndex);
-      transaction.items.insert(classes[classIndex]);
+      transaction.items.set(classIndex);
     }
     transactions.push_back(transaction);
   }
-  return std::tie(transactions, classes);
+  return transactions;
 }
