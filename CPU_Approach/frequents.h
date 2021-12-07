@@ -7,7 +7,7 @@
 
 namespace Frequents{
 
-    typedef std::function<void(std::vector<ItemSet>)> CallBack;
+    typedef std::function<void(const std::vector<ItemSet> &)> CallBack;
 
     typedef struct Job{
         float minFrequent;
