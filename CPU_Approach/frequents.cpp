@@ -18,7 +18,7 @@ std::vector<ItemSet> getFrequentsGeneric(std::function<double(ItemSet)> supportF
 }
 
 
-std::vector<ItemSet> Frequents::getFrequents( const ItemIndex &itemMap, const size_t & transactionCount, Frequents::Job & job){
+std::vector<ItemSet> Frequents::getFrequents(ItemIndex &itemMap, const size_t & transactionCount, Frequents::Job & job){
     auto supportFn = [&itemMap, &transactionCount](ItemSet items){
         return FrequencyAnalysis::support(itemMap, transactionCount, items);
     };

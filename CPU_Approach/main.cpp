@@ -13,6 +13,7 @@
 #include "./frequents.h"
 #include "./exclusiveRun.h"
 #include "./bitsetUtils.h"
+#include "./itemIndex.h"
 
 // Takes a set of current frequents and generates candidate itemsets that have one extra
 // Item
@@ -106,7 +107,7 @@ int main(int argc, char const *argv[])
         equivalenceClasses.push_back({(ItemSet{}).set(i)});
     }
 
-    auto itemTransactions = FrequencyAnalysis::transform(transactions);
+    ItemIndex itemTransactions(transactions, numClasses);
 
     auto beginAll = std::chrono::high_resolution_clock::now();
 

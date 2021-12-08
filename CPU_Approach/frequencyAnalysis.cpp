@@ -7,7 +7,7 @@
 #include "./bitsetUtils.h"
 
 
-std::vector<TransactionID> mutualTransactions(const TransactionList& transactions, const ItemSet & items){
+std::vector<TransactionID> mutualTransactions(TransactionList& transactions, const ItemSet & items){
     std::vector<TransactionID> result;
     for (const auto & transaction:transactions){
         if ((transaction.items & items) == items){
@@ -31,41 +31,24 @@ double FrequencyAnalysis::support(const TransactionList& transactions, const Ite
     return (double) sharedCount/ transactions.size();
 }
 
-std::set<TransactionID> mutualTransactions(const ItemIndex& itemMap, const ItemSet & items){
+std::set<TransactionID> mutualTransactions(ItemIndex& itemIndex, const ItemSet & items){
     std::set<TransactionID> sharedTransactions;
     for (const auto& item:itemSetToIDs(items)){
-        auto itemMapIt = itemMap.find(item);
-
-        if (itemMapIt == itemMap.end()) continue;
+        auto iterators = itemIndex.getTransactionIterators(item);
+        auto beginTxns = iterators.first;
+        auto endTxns = iterators.second;
         
-        std::set<TransactionID> transactions(itemMapIt->second.begin(), itemMapIt->second.end());
         
         if (sharedTransactions.size() == 0){
-            sharedTransactions.insert(transactions.begin(),transactions.end());
+            sharedTransactions.insert(beginTxns, endTxns);
         }else{
-            sharedTransactions = intersection(sharedTransactions, transactions);
+            sharedTransactions = intersection(sharedTransactions, beginTxns, endTxns);
             if (sharedTransactions.size()==0) return sharedTransactions;
         }
     }
     return sharedTransactions;
 }
 
-
-double FrequencyAnalysis::support(const ItemIndex& itemMap, size_t numTransactions, const ItemSet & items){
+double FrequencyAnalysis::support(ItemIndex& itemMap, size_t numTransactions, const ItemSet & items){
     return (double)mutualTransactions(itemMap, items).size()/numTransactions;
-}
-
-ItemIndex FrequencyAnalysis::transform(const TransactionList& transactions){
-    ItemIndex items;
-    for (const auto&transaction:transactions){
-        for (const auto&item: itemSetToIDs(transaction.items)){
-            auto itemInMapIt = items.find(item);
-            if (itemInMapIt == items.end()){
-                items.insert({item,{transaction.id}});
-            }else{
-                itemInMapIt->second.push_back(transaction.id);
-            }
-        }
-    }
-    return items;
 }

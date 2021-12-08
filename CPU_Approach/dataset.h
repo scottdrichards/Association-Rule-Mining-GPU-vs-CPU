@@ -7,7 +7,7 @@
 #include <bitset>
 #include <tuple>
 
-#define MAX_NUM_ITEMS 64
+#define MAX_NUM_ITEMS 128
 
 typedef uint32_t ItemID;
 // A bitmap of which item is active - up to 64 different items available
@@ -18,7 +18,6 @@ typedef struct Transaction{
     ItemSet items;
 } Transaction;
 typedef std::vector<Transaction> TransactionList;
-typedef std::map<ItemID, std::vector<TransactionID>> ItemIndex;
 
 namespace Dataset{
     TransactionList generate(

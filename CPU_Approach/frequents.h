@@ -16,6 +16,6 @@ namespace Frequents{
         CallBack callback;
     }Job;
 
-    std::vector<ItemSet> getFrequents( const ItemIndex &itemMap, const size_t & transactionCount, Job & job);
+    std::vector<ItemSet> getFrequents( ItemIndex &itemMap, const size_t & transactionCount, Job & job);
     std::vector<ItemSet> getFrequents( const TransactionList &transactions, Job & job);
 }
