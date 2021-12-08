@@ -144,8 +144,10 @@ int main(int argc, char const *argv[])
         ///////////////////////////////////////////////////////////////////////////
         // Orchestration (assign jobs to threads and get results)
 
-        ProgressBar progressBar(candidateCount);
-        auto callback = [&progressBar](const std::vector<ItemSet>& newFrequents){
+        const auto scaleFactor = candidateCount>1000?candidateCount/1000:1;
+        ProgressBar progressBar(candidateCount/scaleFactor);
+        auto callback = [&progressBar, &scaleFactor](const std::vector<ItemSet>& newFrequents, const size_t & iteration){
+            if (iteration % scaleFactor != 0) return;
             exclusiveRun([&progressBar](){
                 progressBar.update(1);
             });

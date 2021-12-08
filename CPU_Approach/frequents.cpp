@@ -9,8 +9,9 @@
 
 std::vector<ItemSet> getFrequentsGeneric(std::function<double(ItemSet)> supportFn, Frequents::Job & job){
     auto & candidates = job.candidates;
-    candidates.erase(std::remove_if(candidates.begin(), candidates.end(),[&supportFn, &job, &candidates](ItemSet candidate)->bool{
-        job.callback(candidates);
+    size_t iteration = 0;
+    candidates.erase(std::remove_if(candidates.begin(), candidates.end(),[&](ItemSet candidate)->bool{
+        job.callback(candidates, iteration++);
         double support = supportFn(candidate);
         return support<job.minSupport;        
     }), candidates.end());
