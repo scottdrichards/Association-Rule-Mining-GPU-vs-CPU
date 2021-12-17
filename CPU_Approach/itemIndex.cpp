@@ -7,7 +7,7 @@ ItemIndex::ItemIndex(const std::vector<Transaction> & transactionsIn, const size
     // First create a map 
     std::map<ItemID, std::vector<TransactionID>> map;
     for (const auto&transaction:transactionsIn){
-        for (const auto&item: itemSetToIDs(transaction.items)){
+        for (const auto&item: BitSetUtils::toIndices(transaction.items)){
             auto itemInMapIt = map.find(item);
             if (itemInMapIt == map.end()){
                 map.insert({item,{transaction.id}});

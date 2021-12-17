@@ -33,7 +33,7 @@ double FrequencyAnalysis::support(const TransactionList& transactions, const Ite
 
 std::set<TransactionID> mutualTransactions(ItemIndex& itemIndex, const ItemSet & items){
     std::set<TransactionID> sharedTransactions;
-    for (const auto& item:itemSetToIDs(items)){
+    for (const auto& item:BitSetUtils::toIndices(items)){
         auto iterators = itemIndex.getTransactionIterators(item);
         auto beginTxns = iterators.first;
         auto endTxns = iterators.second;

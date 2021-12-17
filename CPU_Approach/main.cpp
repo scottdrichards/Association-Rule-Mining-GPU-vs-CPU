@@ -11,64 +11,129 @@
 #include "./frequencyAnalysis.h"
 #include "./progressBar.h"
 #include "./frequents.h"
-#include "./exclusiveRun.h"
 #include "./bitsetUtils.h"
 #include "./itemIndex.h"
+#include "./bitsetUtils.h"
 
 // Takes a set of current frequents and generates candidate itemsets that have one extra
 // Item
-std::vector<ItemSet> generateCandidates(const std::vector<ItemSet> & curFrequents){
+std::vector<ItemSet> generateCandidates(const std::vector<ItemSet> & curFrequents, uint8_t numThreads = 1){
+
+    std::cout<<"Identifying Active Items"<<std::endl;
     // Find out which items were found in the frequents
-    ItemSet activeItems = 0;    
+    ProgressBar progressBar(curFrequents.size());
+    ItemSet activeItems = 0;   
+
     for (const auto & curFrequent: curFrequents){
         activeItems |= curFrequent;
+        progressBar.update();
+    }
+    const auto activeItemsVector = BitSetUtils::toIndices(activeItems);
+    std::cout<<std::endl<<"There are currently "<<activeItemsVector.size()<<" active items"<<std::endl;
+
+    std::cout<<"Generating Candidates, each having "<<BitSetUtils::toIndices(curFrequents.front()).size()<<" items"<<std::endl;
+    // ProgressBar progressBar(curFrequents.size());
+
+    const auto workFn = [&activeItemsVector, &curFrequents](size_t beginIndex, size_t endIndex, std::vector<ItemSet> & candidates){
+        for (auto cur = beginIndex; cur != endIndex; cur++){
+            const auto & frequent = curFrequents.at(cur);
+            // Add another item ID to the itemset
+            for (const auto itemID:activeItemsVector){
+                // If we already have it, move along, we can't add anything
+                if (frequent.test(itemID)) continue;
+                
+                // Make a copy of it
+                auto candidate = frequent;
+
+                candidate.set(itemID);
+
+                candidates.push_back(candidate);
+            }           
+        }
+    };
+
+    typedef struct{
+        std::thread thread;
+        std::vector<ItemSet> itemSets;
+    } Job;
+
+    std::vector<Job> jobs(numThreads);
+    auto itemsPerThread = curFrequents.size()/numThreads;
+    auto beginIndex = 0;
+    for (auto i = 0; i<numThreads; i++){
+        auto & job = jobs[i];
+
+        auto endIndex = beginIndex+itemsPerThread;
+
+        const auto lastIteration = i == numThreads-1;
+        if (lastIteration) endIndex = curFrequents.size();
+
+        std::thread thread(workFn, beginIndex, endIndex, std::ref(job.itemSets));
+        job.thread = std::move(thread);
     }
 
     std::vector<ItemSet> candidates;
-    for (const auto & frequent: curFrequents){
-        // Add another item ID to the itemset
-        for (const auto itemID:itemSetToIDs(activeItems)){
-            // If we already have it, move along, we can't add anything
-            if (frequent.test(itemID)) continue;
-            
-            // Make a copy of it
-            auto candidate = frequent;
-
-            candidate.set(itemID);
-
-            candidates.push_back(candidate);
-        }
+    for (auto & job: jobs){
+        job.thread.join();
+        candidates.insert(candidates.end(), job.itemSets.begin(), job.itemSets.end());
     }
+    std::cout<<std::endl<<"Complete, generated: "<<candidates.size()<<" candidates"<<std::endl;
     return candidates;
 }
 
 // Determines how frequent each item is and returns them in decreasing order
-std::vector<ItemID> itemsByFrequency(const std::vector<ItemSet> & nextTests){
+std::vector<ItemID> itemsByFrequency(const std::vector<ItemSet> & nextTests, uint8_t numThreads = 1){
+    std::cout<<"Counting item frequencies"<<std::endl;
+
     // First we count the items to figure out which have the highest frequency
-    std::map<ItemID,uint32_t> classCounts;
-    for (const auto & test: nextTests){
-        for (const auto & classID:itemSetToIDs(test)){
-            auto classNode = classCounts.find(classID);
-            if (classNode == classCounts.end()){
-                classCounts.insert({classID,1});
-            }else{
-                classNode->second++;
-            }
+    std::vector<uint32_t> classCounts(MAX_NUM_ITEMS);
+    ProgressBar progressBar(nextTests.size());
+
+    typedef struct{
+        std::thread thread;
+        std::vector<uint32_t> counts;
+    } Job;
+    std::vector<Job> jobs(numThreads);
+    const auto numItemsPerJob = nextTests.size()/jobs.size();
+    const auto numItemsPerPercent = nextTests.size()/100;
+    for (size_t i = 0; i<jobs.size(); i++){
+        auto & job = jobs.at(i);
+        job.counts.resize(ItemSet().size());
+        const auto beginIndex = numItemsPerJob*i;
+        const auto endIndex = (i==jobs.size())?nextTests.size():beginIndex+numItemsPerJob;
+        job.thread = std::thread(
+            [&nextTests, &progressBar, &numItemsPerPercent](size_t begin, size_t endIndex, std::vector<uint32_t> &classCounts){
+                size_t lastUpdateIndex = begin;
+                for (auto testIndex = begin; testIndex<endIndex; testIndex++){
+                    const auto & test = nextTests.at(testIndex);
+                    for (auto classIndex = 0; classIndex<MAX_NUM_ITEMS; classIndex++){
+                        if (test.test(classIndex)) classCounts[classIndex]++;
+                    }
+                    if (testIndex%numItemsPerPercent==0 || testIndex == endIndex-1 ){
+                        progressBar.update(testIndex-lastUpdateIndex);
+                        lastUpdateIndex = testIndex;
+                    }
+                }
+            },
+            beginIndex, endIndex, std::ref(job.counts));
+    }
+    std::vector<uint32_t> counts(ItemSet().size());
+    for(auto & job:jobs){
+        job.thread.join();
+        for(size_t i =0; i<counts.size();i++){
+            counts[i] += job.counts[i];
         }
     }
     
-    // Next step we provide a list of items that is sorted by frequency
-    std::vector<ItemID> items;
+    std::vector<ItemID> itemIDs;
+    for (size_t i = 0; i<counts.size(); i++) itemIDs.push_back(i);
 
-    // Extract just the items
-    for (const auto & classCount:classCounts){
-        items.push_back(classCount.first);
-    }
-    // Sort them by their counts
-    sort(items.begin(), items.end(), [&classCounts](const ItemID &a, const ItemID &b){
-        return std::greater<uint32_t>{}(classCounts[a],classCounts[b]);
+    std::sort(itemIDs.begin(), itemIDs.end(), [&counts](const ItemID & a, const ItemID & b){
+        return std::greater<ItemID>{}(counts[a],counts[b]);
     });
-    return items;
+
+    while(counts[itemIDs.back()] == 0) itemIDs.pop_back();
+    return itemIDs;
 }
 
 
@@ -148,9 +213,7 @@ int main(int argc, char const *argv[])
         ProgressBar progressBar(candidateCount/scaleFactor);
         auto callback = [&progressBar, &scaleFactor](const std::vector<ItemSet>& newFrequents, const size_t & iteration){
             if (iteration % scaleFactor != 0) return;
-            exclusiveRun([&progressBar](){
-                progressBar.update(1);
-            });
+            progressBar.update(1);
         };
 
         // Define the function we will have each thread run
@@ -187,6 +250,7 @@ int main(int argc, char const *argv[])
             curFrequents.insert(curFrequents.end(),threadResult.second.begin(), threadResult.second.end());
         }
         allFrequents.insert(allFrequents.end(), curFrequents.begin(), curFrequents.end());
+        std::cout<<std::endl;
 
         auto endProcessing = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double, std::milli> processingTime = endProcessing-beginProcessing;
@@ -198,9 +262,9 @@ int main(int argc, char const *argv[])
         // Create next tests (if possible)
 
         // Generate candidates based on the recently received frequents
-        auto candidates = generateCandidates(curFrequents);
+        auto candidates = generateCandidates(curFrequents, numThreads);
 
-        auto orderedItems = itemsByFrequency(candidates);
+        auto orderedItems = itemsByFrequency(candidates, numThreads);
 
         equivalenceClasses.clear();
         // No go through and create equivalence classes
@@ -223,7 +287,7 @@ int main(int argc, char const *argv[])
 
         std::chrono::duration<double, std::milli> orchestrationTime = endOrchestrating-beginOrchestrating;
         orchestratingMilliseconds += orchestrationTime;
-        std::cout<<"\nCompleted group, processing time: "<<int(processingMilliseconds.count())<<", orchestration: "<<int(orchestrationTime.count())<<std::endl;
+        std::cout<<"Completed group, processing time: "<<int(processingMilliseconds.count())<<", orchestration: "<<int(orchestrationTime.count())<<std::endl;
     }
 
     auto endAll = std::chrono::high_resolution_clock::now();

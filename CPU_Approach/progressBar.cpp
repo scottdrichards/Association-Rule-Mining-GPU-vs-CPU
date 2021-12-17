@@ -1,22 +1,28 @@
 #include "progressBar.h"
 
 #include <iostream>
+#include <string>
 #include <stdint.h> 
+#include "./exclusiveRun.h"
 
 #define BAR_WIDTH 70
 
 void printProgress(double progress){
     auto completed = int(progress*BAR_WIDTH);
-    std::cout<<'\r';
-    std::cout<<"[";
-    std::cout<<std::string(completed,'=');
-    std::cout<<">";
-    std::cout<<std::string(BAR_WIDTH-completed,' ');
-    std::cout<<"]";
-    printf("%*d",3,int(progress*100));
-    std::cout<<'%';
-    std::cout.flush();
+    std::string str = "\r[";
+    str += std::string(completed,'=');
+    str += ">" + std::string(BAR_WIDTH-completed,' ');
+    str += "]";
+    str += std::to_string(int(progress*100))+"%";
+    exclusiveRun([str](){
+        std::cout<<str<<std::flush;
+    });
 }
+
+ProgressBar::~ProgressBar(){
+    std::cout<<std::endl;
+};
+
 
 void ProgressBar::update(size_t amount){
     this->workDone+=amount;
