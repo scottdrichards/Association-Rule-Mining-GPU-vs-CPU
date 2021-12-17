@@ -1,5 +1,6 @@
 #include "progressBar.h"
 
+#include <chrono>
 #include <iostream>
 #include <string>
 #include <stdint.h> 
@@ -19,8 +20,16 @@ void printProgress(double progress){
     });
 }
 
+ProgressBar::ProgressBar(size_t totalWork){
+    this->workDone = 0;
+    this->workToDo = totalWork;
+    this->startTime = std::chrono::high_resolution_clock::now();
+}
+
 ProgressBar::~ProgressBar(){
-    std::cout<<std::endl;
+    const auto endTime = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> duration = endTime - this->startTime;
+    std::cout<<"\r\e[KComplete: "<<int(duration.count())<<"ms\n"<<std::endl;
 };
 
 

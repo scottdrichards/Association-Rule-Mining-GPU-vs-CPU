@@ -1,16 +1,16 @@
 #pragma once
 
+#include <chrono>
+
 #include <cstddef>
 #include <atomic>
 class ProgressBar{
     private:
         size_t workToDo;
         std::atomic<uint32_t> workDone;
+        std::chrono::_V2::system_clock::time_point startTime;
     public:
-        inline ProgressBar(size_t totalWork):workToDo(totalWork),workDone(0){
-            this->workDone = 0;
-            this->workToDo = totalWork;
-        };
+        ProgressBar(size_t totalWork);
         ~ProgressBar();
         void update(size_t amount = 1);
 };
