@@ -111,6 +111,8 @@ int main(int argc, char const *argv[])
         std::vector<ItemSet> candidates;
         generateCandidates(newFrequents, numThreads, candidates);
 
+        if (candidates.size() == 0) break;
+
         auto orderedItems = itemsByFrequency(candidates, numThreads);
 
         equivalenceClasses.clear();
