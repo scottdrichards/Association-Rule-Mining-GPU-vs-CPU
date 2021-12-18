@@ -2,6 +2,7 @@
 #include <random>
 #include <tuple>
 #include "dataset.h"
+#include "../utils/progressBar.h"
 
 #define RNG_SEED 1
 
@@ -22,6 +23,7 @@ TransactionList Dataset::generate(
   };
 
   TransactionList transactions;
+  ProgressBar progressBar(numTransactions);
   for (auto i = 0; i<numTransactions; i++){
     auto itemCount = minTransactionSize+std::rand()%(maxTransactionSize-minTransactionSize);
     Transaction transaction;
@@ -35,6 +37,7 @@ TransactionList Dataset::generate(
       auto classIndex = genSample(firstIndex);
       transaction.items.set(classIndex);
     }
+    progressBar.increment();
     transactions.push_back(transaction);
   }
   return transactions;

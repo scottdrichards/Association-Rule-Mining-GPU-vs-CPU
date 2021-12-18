@@ -3,9 +3,9 @@
 #include <functional>
 #include "./frequencyAnalysis.h"
 #include "./frequents.h"
-#include "./progressBar.h"
-#include "./exclusiveRun.h"
-#include "./bitsetUtils.h"    
+#include "../utils/progressBar.h"
+#include "../utils/exclusiveRun.h"
+#include "../utils/bitsetUtils.h"    
 
 std::vector<ItemSet> getFrequentsGeneric(std::function<double(ItemSet)> supportFn, Frequents::Job & job){
     auto & candidates = job.candidates;

@@ -1,9 +1,7 @@
 #pragma once
 #include <list>
 #include <functional>
-#include "./dataset.h"
-
-
+#include "../dataset/dataset.h"
 
 namespace Frequents{
 

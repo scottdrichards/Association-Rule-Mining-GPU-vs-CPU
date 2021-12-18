@@ -1,10 +1,11 @@
+#include "./frequencyAnalysis.h"
+
 #include <string>
 #include <set>
 #include <algorithm> //copy-if
 
-#include "./setUtils.h"
-#include "./frequencyAnalysis.h"
-#include "./bitsetUtils.h"
+#include "../utils/setUtils.h"
+#include "../utils/bitsetUtils.h"
 
 
 std::vector<TransactionID> mutualTransactions(TransactionList& transactions, const ItemSet & items){

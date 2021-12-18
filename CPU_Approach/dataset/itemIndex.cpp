@@ -1,7 +1,7 @@
 #include <iterator> // advance
 #include <algorithm> //sort
 #include "itemIndex.h"
-#include "bitsetUtils.h"
+#include "../utils/bitsetUtils.h"
 
 ItemIndex::ItemIndex(const std::vector<Transaction> & transactionsIn, const size_t & numItems){
     // First create a map 

@@ -4,7 +4,7 @@ CFLAGS = -std=c++11 -pthread -Wall
 
 TMP = ./tmp/
 
-ALL_FILES = $(basename $(wildcard *.cpp))
+ALL_FILES = $(basename  $(wildcard **/*.cpp) $(wildcard *.cpp))
 
 all: $(addprefix $(TMP),$(addsuffix .o,$(ALL_FILES)))
 	mkdir $(TMP) -p
@@ -19,6 +19,7 @@ $(TMP)main.o: main.cpp
 
 $(TMP)%.o: %.cpp  %.h 
 	mkdir $(TMP) -p
+	mkdir $(dir $@) -p
 	$(CC) $(CFLAGS) -o $@ -c $<
 
 clean:
