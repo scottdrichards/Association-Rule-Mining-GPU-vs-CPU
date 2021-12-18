@@ -15,7 +15,7 @@
 ItemSet identifyActiveItems(const std::vector<ItemSet> & curFrequents){
     std::cout<<"Identifying Active Items"<<std::endl;
     ItemSet activeItems = 0;   
-    ProgressBar progressBar(curFrequents.size());
+    ProgressBar progressBar(curFrequents.size(), "IdentifyActive", false);
 
     auto iteration = 0;
     for (const auto & curFrequent: curFrequents){
@@ -45,7 +45,7 @@ void generateCandidates(
 
     std::vector<Job> jobs(numThreads);
     auto itemsPerThread = curFrequents.size()/numThreads;
-    ProgressBar progressBar(curFrequents.size());
+    ProgressBar progressBar(curFrequents.size(), "GenerateCandidates");
     for (auto i = 0; i<numThreads; i++){
         auto & job = jobs[i];
 

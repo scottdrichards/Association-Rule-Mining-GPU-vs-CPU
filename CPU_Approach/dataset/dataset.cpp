@@ -23,7 +23,7 @@ TransactionList Dataset::generate(
   };
 
   TransactionList transactions;
-  ProgressBar progressBar(numTransactions);
+  ProgressBar progressBar(numTransactions, "GenerateDataset", false);
   for (auto i = 0; i<numTransactions; i++){
     auto itemCount = minTransactionSize+std::rand()%(maxTransactionSize-minTransactionSize);
     Transaction transaction;

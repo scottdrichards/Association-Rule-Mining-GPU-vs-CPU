@@ -14,7 +14,7 @@ std::vector<ItemID> itemsByFrequency(const std::vector<ItemSet> & nextTests, uin
 
     // First we count the items to figure out which have the highest frequency
     std::vector<uint32_t> classCounts(MAX_NUM_ITEMS);
-    ProgressBar progressBar(nextTests.size());
+    ProgressBar progressBar(nextTests.size(), "CountItemByFreq");
 
     typedef struct{
         std::thread thread;

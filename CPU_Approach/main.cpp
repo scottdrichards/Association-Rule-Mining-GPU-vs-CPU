@@ -16,10 +16,12 @@
 #include "utils/progressBar.h"
 #include "utils/bitsetUtils.h"
 #include "utils/bitsetUtils.h"
+#include "utils/log.h"
 
 
 int main(int argc, char const *argv[])
 {
+    ProgressBar totalProgress(1, "total", false, true);
     std::cout<<"Frequency Analysis - CPU"<<std::endl;
     if (argc!=9){
         std::cout<<"Expected 8 arguments"<<std::endl;
@@ -36,6 +38,7 @@ int main(int argc, char const *argv[])
     const bool indexTransactions = std::string(argv[argvIndex++])=="index";
 
 
+
     if (numThreads > std::thread::hardware_concurrency()){
         std::cout<<"!!! numThreads is higher than number of concurrent threads the system supports, setting to system max: ";
         std::cout<<std::thread::hardware_concurrency()<<std::endl;
@@ -45,6 +48,16 @@ int main(int argc, char const *argv[])
         std::cout<<"!!! num classes is higher than defined MAX_NUM_ITEMS, setting to max:"<<MAX_NUM_ITEMS<<std::endl;
         numClasses = MAX_NUM_ITEMS;
     }
+
+    psuedoLogger.insert(PsuedoLogEntry("FrequencyThreshold", std::to_string(freqThreshold)));
+    psuedoLogger.insert(PsuedoLogEntry("NumClasses", std::to_string(numClasses)));
+    psuedoLogger.insert(PsuedoLogEntry("NumTransactions", std::to_string(numTransactions)));
+    psuedoLogger.insert(PsuedoLogEntry("Skew", std::to_string(skew)));
+    psuedoLogger.insert(PsuedoLogEntry("MaxTransactionSize", std::to_string(maxTransactionSize)));
+    psuedoLogger.insert(PsuedoLogEntry("MinTransactionSize", std::to_string(minTransactionSize)));
+    psuedoLogger.insert(PsuedoLogEntry("NumThreads", std::to_string(numThreads)));
+    psuedoLogger.insert(PsuedoLogEntry("UseIndex", std::to_string(indexTransactions)));
+
 
     TransactionList transactions = Dataset::generate(numClasses, numTransactions,skew, maxTransactionSize, minTransactionSize);
 
@@ -58,13 +71,12 @@ int main(int argc, char const *argv[])
     auto beginAll = std::chrono::high_resolution_clock::now();
 
     std::vector<ItemSet> allFrequents;
-    while (equivalenceClasses.size()){
+    while (1){
         ///////////////////////////////////////////////////////////////////////////
         // Header
         size_t candidateCount = 0;
         for (const auto & equivalenceClass:equivalenceClasses) candidateCount += equivalenceClass.size();
-        std::cout<<"\n"<<std::string(70,'/')+std::string(70,'/')<<std::endl;
-        std::cout<<"Beginning to process "<<int(candidateCount)<<" candidates"<<std::endl;
+        std::cout<<"\n"<<std::string(70,'/')+std::string(50,'/')<<std::endl;
 
         ///////////////////////////////////////////////////////////////////////////
         // Assign equivalence classes to groups
@@ -83,57 +95,13 @@ int main(int argc, char const *argv[])
             (*jobIt).insert((*jobIt).end(),equivalenceClass.begin(),equivalenceClass.end());
         }
 
+        std::vector<ItemSet> newFrequents;
 
-        ProgressBar progressBar(candidateCount);
-        auto callback = [&progressBar](const std::vector<ItemSet>& newFrequents, const size_t & iteration){
-            progressBar.increment();
-        };
+        Frequents::identifyFrequents(candidateCount, testGroups, freqThreshold, indexTransactions,transactions, itemTransactions, newFrequents);
+        
+        if (newFrequents.size()==0) break;
 
-        // Create the threadWatchers object right now, so that we can reference into it.
-        // If we dynamically create it (push_back), the references might changeto the memory locations
-
-        typedef struct {
-            std::thread thread;
-            std::vector<ItemSet> frequents;
-        } Job;
-
-        // Assign out work asynchronously
-        std::vector<Job> jobs(testGroups.size());
-        for (size_t i = 0; i<testGroups.size(); i++){
-            const auto & testGroup = testGroups.at(i);
-            auto & job = jobs.at(i);
-
-            job.thread = std::thread(
-                [&](const std::vector<ItemSet> & candidates, std::vector<ItemSet>& result){
-                    Frequents::Job job = {};
-                    job.callback = callback;
-                    job.candidates = std::move(candidates);
-                    job.minFrequent = 0;
-                    job.minSupport = freqThreshold;
-                    
-                    // This is the core part!!!!!!
-                    if (indexTransactions){
-                        result = Frequents::getFrequents(itemTransactions, transactions.size(), job);
-                    }else{
-                        result = Frequents::getFrequents(transactions, job);            
-                    }
-                },
-            std::ref(testGroup), std::ref(job.frequents));
-        }
-
-        // Wait for each job to finish and accumulate. could orchestrate better and have threads pull work when free
-        // but that might be too difficult for the minimal payoff
-        std::vector<ItemSet> curFrequents;
-        for (auto &threadResult:jobs){
-            threadResult.thread.join();
-            curFrequents.insert(curFrequents.end(),threadResult.frequents.begin(), threadResult.frequents.end());
-        }
-
-        allFrequents.insert(allFrequents.end(), curFrequents.begin(), curFrequents.end());
-
-        progressBar.complete();
-
-
+        allFrequents.insert(allFrequents.end(), newFrequents.begin(), newFrequents.end());
 
         ///////////////////////////////////////////////////////////////////////////
         // Create next tests (if possible)
@@ -141,7 +109,7 @@ int main(int argc, char const *argv[])
         // Generate candidates based on the recently received frequents
 
         std::vector<ItemSet> candidates;
-        generateCandidates(curFrequents, numThreads, candidates);
+        generateCandidates(newFrequents, numThreads, candidates);
 
         auto orderedItems = itemsByFrequency(candidates, numThreads);
 
@@ -185,5 +153,8 @@ int main(int argc, char const *argv[])
     std::cout<<"\tTotal:                 "<<int(milliseconds.count())<<" ms"<<std::endl;
     std::cout<<"\tUtilization:           "<<int(milliseconds.count())*numThreads<<" ms*thread"<<std::endl;
 
+    totalProgress.complete();
+
+    printLog();
     return 0;
 }
