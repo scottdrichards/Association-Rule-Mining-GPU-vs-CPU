@@ -36,7 +36,7 @@ std::vector<ItemID> itemsByFrequency(const std::vector<ItemSet> & nextTests, uin
                     for (auto classIndex = 0; classIndex<MAX_NUM_ITEMS; classIndex++){
                         if (test.test(classIndex)) classCounts[classIndex]++;
                     }
-                    if (testIndex%numItemsPerPercent==0 || testIndex == endIndex-1 ){
+                    if (numItemsPerPercent &&(testIndex%numItemsPerPercent==0 || testIndex == endIndex-1 )){
                         progressBar.increment(testIndex-lastUpdateIndex);
                         lastUpdateIndex = testIndex;
                     }
