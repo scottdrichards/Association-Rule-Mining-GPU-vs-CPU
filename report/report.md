@@ -55,7 +55,7 @@ Not only could a significant amount of the problem space fit within the cache, i
 
 ## Results
 
-After running almost 400 tests continuously over the course of 8 hours, I have the following results.
+After running almost 500 tests continuously over the course of 8 hours, I have the following results.
 
 ### Varying Transaction Count
 
