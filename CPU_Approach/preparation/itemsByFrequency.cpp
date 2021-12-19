@@ -52,13 +52,14 @@ std::vector<ItemID> itemsByFrequency(const std::vector<ItemSet> & nextTests, uin
         }
     }
     
-    std::vector<ItemID> itemIDs;
-    for (size_t i = 0; i<counts.size(); i++) itemIDs.push_back(i);
+    std::vector<ItemID> itemIDs = {};
+    for (size_t i = 0; i<counts.size(); i++){
+        if (counts[i] != 0) itemIDs.push_back(i);
+    }
 
     std::sort(itemIDs.begin(), itemIDs.end(), [&counts](const ItemID & a, const ItemID & b){
         return std::greater<ItemID>{}(counts[a],counts[b]);
     });
 
-    while(counts[itemIDs.back()] == 0) itemIDs.pop_back();
     return itemIDs;
 }
