@@ -53,6 +53,14 @@ While these operations may be easy to divide into parallel portions, inter-core 
 
 Not only could a significant amount of the problem space fit within the cache, it was all very structured so that a single cache line update (64 bytes) can hold four transactions. If all cache accesses missed L1 and L2, you still would likely have a 20 cycle latency for each transaction which will likely be close to how many cycles are consumed to process a single transaction. This is why I do not see any cache pressure effects in my results.
 
+## GPU Approach
+
+There is a host (CPU) and a device (GPU). The host will, first, read the database file. It will then copy the database from host memory to dvice global memory. To do that it will call cudaMalloc(). Since the host does not know the device's address space, it will create a pointer in the host memory and instead of sending the pointer to the device, it will send the address of the pointer to the device. The device will allocate the requested space in the device global memory and will write the pointer in the address provide by the host. The host will then copy/transfer the data from host memory to device global memory.
+
+GPU is a SIMD machine. Several threads are running in parallel executing the same procedure. The cells in the database matrix are not dependent on each others. So, we can parallelize our program on the basis on number of cells. Host machine launches several kernel function, each of which is executing the same procedure. We have taken the TILE_WIDTH of 4.
+
+The kernel is executed on the GPU. First, it will transpose the database. Then it sorts the database in lexicographical order and finds the equivalent class of length 2. After that it will do the intersection of the equivalent sets and calculate the support and confidence percentage.
+
 ## Results
 
 After running almost 500 tests continuously over the course of 8 hours, I have the following results.
