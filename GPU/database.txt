@@ -1,0 +1,18 @@
+16
+8
+t1: {A,B}
+t2: {A,B,C,D,E}
+t3: {A,B,C}
+t4: {A,B,C,D,E,F}
+t5: {A,B}
+t6: {A,B,C,D}
+t7: {A,B,C,D}
+t8: {A,B,C}
+t9: {A,B}
+t10: {A,B,C,D}
+t11: {A,B,C}
+t12: {A,B,C,D,E,F}
+t13: {A,B,C,D,E,F,G}
+t14: {A,B,C,D,E}
+t15: {A,B,C,D,E,F,G}
+t16: {A}
