@@ -59,10 +59,11 @@ The host (CPU) will read the database file and copy it to the device (GPU) globa
 
 The host launches kernels to generate the transpose database on GPU.
 - Number of kernels launch = Number of cells of the matrix. In transpose generation, the parallel execution is at the matrix cell granularity.
+
 Configuration - 
 - Number of cuda blocks  = Number of transactions = Number of rows in the database.
 - Number of cuda threads = Maximum number of itemsets = Number of columns in the database.
-I have purposely chosen this configuration to minimize the control flow divergence problems.
+- I have purposely chosen this configuration to minimize the control flow divergence problems.
 
 The host then launches kernels (same amount of kernels as it launches for transpose database) to generate the equivalent classes of length 2.
 It will sort the entries lexicographically and also calculate the support and confidence %.
