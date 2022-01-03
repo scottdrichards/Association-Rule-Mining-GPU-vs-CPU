@@ -65,7 +65,7 @@ Configuration -
 - Number of cuda threads = Maximum number of itemsets = Number of columns in the database.
 - I have purposely chosen this configuration to minimize the control flow divergence problems.
 
-The host then launches kernels (same amount of kernels as it launches for transpose database) to generate the equivalent classes of length 2.
+The host then launches kernels (same number of kernels and same configuration as transpose db generation function) to generate the equivalent classes of length 2.
 It will sort the entries lexicographically and also calculate the support and confidence %.
 Here also, each cell of the matrix is executed parallely.
 
