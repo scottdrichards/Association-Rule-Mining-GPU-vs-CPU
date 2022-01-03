@@ -1,11 +1,11 @@
 +++++++++++++++++++++++++
 To compile:
 -----------
-nvcc -o Ovik *.cu
+nvcc -o app.out ./*.cu
 
 To run:
 -------
-./Ovik
+./app.out
 
 ++++++++++++++++++++++++++
 Input:  database.txt file
