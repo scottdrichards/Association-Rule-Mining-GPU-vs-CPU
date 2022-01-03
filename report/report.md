@@ -60,7 +60,24 @@ The host (CPU) will read the database file and copy it to the device (GPU) globa
 The host launches kernels to generate the transpose of the database on GPU. 
 Number of cuda blocks  = Number of transactions = Number of rows in the database
 Number of cuda threads = Maximum number of itemsets = Number of columns in the database
-Here each cell of the matrix is independently executed.
+I have purposely chosen this configuration to minimize the control divergence problems.
+Here each cell of the matrix is executed independently.
+
+The host then launches kernels (same amount of kernels as it launches for transpose of db) to generate the equivalent classes of length 2.
+It will sort the entries lexicographically and also calculate the support and confidence %.
+Here also, each cell of the matrix is executed independently.
+
+There were 2 trade-offs/decision points we came across.
+1) Sorting - Space vs (Performance and Coding Simplicity)
+             Implementing a sorting algorithm can be quite complicated on GPU and the algorithm can take O(nlog n) time complexity.
+             Since we are parsing each element to find the equivalent class, sorting can take O(const) time complexity if we can arrange dedicated space for elements.
+             I took 27 sets - 26 sets for elements starting with 26 english alphebets respectively and 1 set for other elements.
+             
+             This approach will give us good performance at the cost of space!
+2) In the last 2 kernel launches, each cell of the matrix is executed independently in parallel. This is an ambitiously parallel execution (I am not sure whether I can call it an embarrisngly parallel execution). This has come with a cost. Due to this ambitiously parallel execution we are getting some duplicate entries in our equivalent class. We need to launch another kernel to remove these duplicate entries. This is a sequential bottleneck in our design.
+Alternatively, we can include some sync constraints within the parallel function execution to avoid creating duplicate entries. Such sync constraints will also make the code sequential within the parallel function. We rejected this second approach because the database is highly skewed. There will be very few duplicate entries. The first approach is a better choice from performance point of view in a highly skewed database. 
+
+The host then launches kernels to find the higher length elements along with support and confidence %.
 
 ## Results
 
