@@ -1,0 +1,14 @@
++++++++++++++++++++++++++
+To compile:
+-----------
+nvcc -o Ovik *.cu
+
+To run:
+-------
+./Ovik
+
+++++++++++++++++++++++++++
+Input:  database.txt file
+Output: result.txt file
+++++++++++++++++++++++++++
+
