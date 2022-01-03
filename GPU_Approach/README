@@ -1,7 +1,7 @@
 +++++++++++++++++++++++++
 To compile:
 -----------
-nvcc -o app.out ./*.cu
+nvcc -o app.out ./src/*.cu
 
 To run:
 -------
