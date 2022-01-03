@@ -57,27 +57,33 @@ Not only could a significant amount of the problem space fit within the cache, i
 
 The host (CPU) will read the database file and copy it to the device (GPU) global memory. Since the host does not know the device's address space, it will create a pointer in the host memory and instead of sending the pointer to the device, it will send the address of the pointer to the device. The device will allocate the requested space in the device global memory and will write the pointer in the address provide by the host. The host will then copy/transfer the data from host memory to device global memory.
 
-The host launches kernels to generate the transpose of the database on GPU. 
-Number of cuda blocks  = Number of transactions = Number of rows in the database
-Number of cuda threads = Maximum number of itemsets = Number of columns in the database
-I have purposely chosen this configuration to minimize the control divergence problems.
-Here each cell of the matrix is executed independently.
+The host launches kernels to generate the transpose database on GPU.
+- Number of kernels launch = Number of cells of the matrix. In transpose generation, the parallel execution is at the matrix cell granularity.
+Configuration - 
+- Number of cuda blocks  = Number of transactions = Number of rows in the database.
+- Number of cuda threads = Maximum number of itemsets = Number of columns in the database.
+I have purposely chosen this configuration to minimize the control flow divergence problems.
 
-The host then launches kernels (same amount of kernels as it launches for transpose of db) to generate the equivalent classes of length 2.
+The host then launches kernels (same amount of kernels as it launches for transpose database) to generate the equivalent classes of length 2.
 It will sort the entries lexicographically and also calculate the support and confidence %.
-Here also, each cell of the matrix is executed independently.
+Here also, each cell of the matrix is executed parallely.
 
 There were 2 trade-offs/decision points we came across.
 1) Sorting - Space vs (Performance and Coding Simplicity)
              Implementing a sorting algorithm can be quite complicated on GPU and the algorithm can take O(nlog n) time complexity.
-             Since we are parsing each element to find the equivalent class, sorting can take O(const) time complexity if we can arrange dedicated space for elements.
-             I took 27 sets - 26 sets for elements starting with 26 english alphebets respectively and 1 set for other elements.
+             Since we are parsing each element to find the equivalent class, sorting can take O(const) time complexity if we can arrange some dedicated space for elements starting with some particular letters. I took 27 sets - 26 sets for elements starting with 26 english alphebets respectively and 1 set for other elements.
              
              This approach will give us good performance at the cost of space!
-2) In the last 2 kernel launches, each cell of the matrix is executed independently in parallel. This is an ambitiously parallel execution (I am not sure whether I can call it an embarrisngly parallel execution). This has come with a cost. Due to this ambitiously parallel execution we are getting some duplicate entries in our equivalent class. We need to launch another kernel to remove these duplicate entries. This is a sequential bottleneck in our design.
+             
+2) In the 2 kernels launch, each cell of the matrix is executed in parallel. This has come with a cost. Some duplicate entries are created in our equivalent classes. We need to launch another kernel to remove those duplicate entries. This is a sequential bottleneck in our design.
 Alternatively, we can include some sync constraints within the parallel function execution to avoid creating duplicate entries. Such sync constraints will also make the code sequential within the parallel function. We rejected this second approach because the database is highly skewed. There will be very few duplicate entries. The first approach is a better choice from performance point of view in a highly skewed database. 
 
 The host then launches kernels to find the higher length elements along with support and confidence %.
+
+Overall, I would say if the database is highly skewed there will be more control flow divergence problems.
+In most of the trade-offs we came across, we chose performance over space. So, if the database is very large then we may ran out of space. Some space saving techniques can be applied to make it space efficient like using dynamic list instead of arrays, use of an alternate sorting algorithm to reduce space (offcourse that will affect performance tremendously because our sorting technique is very performance efficient), etc.
+
+To improve the performance further, I tried launching kernels from within kernels. It was like fork bombs in system. Our code did work for small database but machine got crashed in medium to large size database. So, we rejected this technique.
 
 ## Results
 
